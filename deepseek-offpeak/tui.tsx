@@ -1,70 +1,53 @@
 // TUI plugin: shows DeepSeek off-peak pricing periods for Ollama Cloud and OpenCode Go.
 import { Plugin } from "@opencode/plugin/tui"
-import { createMemo, createSignal, For, Show } from "solid-js"
-import {
-  formatNext,
-  MINUTE_MS,
-  nextChange,
-  nextTickDelay,
-  periodInfo,
-  PROFILES,
-  resolveProfile,
-} from "./schedule.ts"
+import { createMemo, createSignal, Show } from "solid-js"
+import { formatNext, nextChange, nextTickDelay, periodInfo, resolveProfile } from "./schedule.ts"
 
 export function PricingBlock(props: { context: Plugin.Context; sessionID: string; now: () => Date }) {
   const theme = props.context.theme
-  const covered = createMemo(() => {
+  const profile = createMemo(() => {
     const live = props.context.ui.model.current()
-    if (live) return resolveProfile(live.providerID, live.modelID) !== undefined
+    if (live) return resolveProfile(live.providerID, live.modelID)
     const stored = props.context.data.session.get(props.sessionID)?.model
-    return resolveProfile(stored?.providerID, stored?.id) !== undefined
+    return resolveProfile(stored?.providerID, stored?.id)
   })
-  const rows = createMemo(() =>
-    PROFILES.map((profile) => {
-      const now = props.now()
-      return {
-        profile,
-        info: periodInfo(profile, now),
-        next: nextChange(profile, now),
-      }
-    }),
-  )
 
   return (
-    <Show when={covered()}>
-      <box>
-        <text fg={theme.text.base}>
-          <b>DeepSeek off-peak</b>
-          <span style={{ fg: theme.text.muted }}> · UTC</span>
-        </text>
-        <For each={rows()}>
-          {(row) => (
+    <Show when={profile()}>
+      {(active) => {
+        const now = props.now()
+        const info = periodInfo(active(), now)
+        const next = nextChange(active(), now)
+        return (
+          <box>
+            <text fg={theme.text.base}>
+              <b>DeepSeek off-peak</b>
+              <span style={{ fg: theme.text.muted }}> · UTC</span>
+            </text>
             <box flexDirection="row" gap={1} minWidth={0}>
               <text fg={theme.text.muted} flexShrink={0}>
                 •
               </text>
               <text fg={theme.text.base} wrapMode="none" truncate flexGrow={1} flexShrink={1} minWidth={0}>
-                <b>{row.profile.label}</b>
+                <b>{active().label}</b>
               </text>
               <box flexDirection="row" gap={1} flexShrink={0}>
-                <text
-                  fg={row.info === "peak" ? theme.text.base : theme.text.muted}
-                  wrapMode="none"
-                >
-                  {row.info}
+                <text fg={info === "peak" ? theme.text.base : theme.text.muted} wrapMode="none">
+                  {info}
                 </text>
-                <Show when={row.next}>
-                  {(next) => (
+                <Show when={next}>
+                  {(transition) => (
                     <text fg={theme.text.muted} wrapMode="none">
-                      {next().kind === "peakEnd" ? "▼" : "▲"} {formatNext(next().at, props.now())}
+                      {transition().kind === "peakEnd" ? "▼" : "▲"}{" "}
+                      {formatNext(transition().at, props.now())}
                     </text>
                   )}
                 </Show>
               </box>
             </box>
-          )}
-        </For>
-      </box>
+          </box>
+        )
+      }}
     </Show>
   )
 }
