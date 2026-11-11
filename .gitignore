@@ -1,0 +1,29 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Vim
+*.swp
+*.swo
+*.swn
+.*.swp
+.*.swo
+.*.swn
+*.un~
+.netrwhist
+.viminfo
+.vim/
+Session.vim
+.session.vim
+
+# Neovim
+.nvim/
+.nvimlog
+nvim.log
