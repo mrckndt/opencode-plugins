@@ -27,6 +27,8 @@ const DEEPSEEK_MODELS: readonly string[] = ["deepseek-v4.1-flash", "deepseek-v4-
 // A week of slack keeps the scan bounded if the profiles gain longer gaps.
 const TRANSITION_HORIZON_DAYS = 8
 export const MINUTE_MS = 60_000
+// All schedule boundaries fall on whole hours, so a 5-minute tick still lands on every transition.
+export const REFRESH_MS = 5 * MINUTE_MS
 const DAY_MS = 24 * 60 * MINUTE_MS
 
 export const PROFILES: readonly Profile[] = [
@@ -116,7 +118,7 @@ export function formatNext(at: Date, now: Date) {
   return `${format.format(at)} ${clock}`
 }
 
-/** Milliseconds until the next whole minute, so ticks stay aligned with schedule boundaries. */
-export function nextMinuteDelay(now: Date) {
-  return MINUTE_MS - (now.getTime() % MINUTE_MS)
+/** Milliseconds until the next refresh tick, aligned to whole REFRESH_MS intervals. */
+export function nextTickDelay(now: Date) {
+  return REFRESH_MS - (now.getTime() % REFRESH_MS)
 }

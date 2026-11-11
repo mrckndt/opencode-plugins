@@ -5,7 +5,7 @@ import {
   formatNext,
   MINUTE_MS,
   nextChange,
-  nextMinuteDelay,
+  nextTickDelay,
   periodInfo,
   PROFILES,
   resolveProfile,
@@ -77,9 +77,9 @@ export default Plugin.define({
     const tick = () => {
       const current = new Date()
       setNow(current)
-      timer = setTimeout(tick, nextMinuteDelay(current))
+      timer = setTimeout(tick, nextTickDelay(current))
     }
-    timer = setTimeout(tick, nextMinuteDelay(now()))
+    timer = setTimeout(tick, nextTickDelay(now()))
     const unregister = context.ui.slot({
       append: "sidebar.content",
       render: (props) => <PricingBlock context={context} sessionID={props.sessionID} now={now} />,

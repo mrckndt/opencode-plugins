@@ -6,7 +6,7 @@ import {
   hhmm,
   modelFamily,
   nextChange,
-  nextMinuteDelay,
+  nextTickDelay,
   periodInfo,
   PROFILES,
   resolveProfile,
@@ -110,10 +110,11 @@ test("formats minutes without wrapping past midnight", () => {
   assert.equal(hhmm(1440), "24:00")
 })
 
-test("aligns the next tick to a whole minute", () => {
-  assert.equal(nextMinuteDelay(new Date("2026-09-24T01:00:30.000Z")), 30_000)
-  assert.equal(nextMinuteDelay(new Date("2026-09-24T01:00:00.000Z")), 60_000)
-  assert.equal(nextMinuteDelay(new Date("2026-09-24T01:00:59.500Z")), 500)
+test("aligns the next tick to a whole five-minute interval", () => {
+  assert.equal(nextTickDelay(new Date("2026-09-24T01:00:30.000Z")), 270_000)
+  assert.equal(nextTickDelay(new Date("2026-09-24T01:00:00.000Z")), 300_000)
+  assert.equal(nextTickDelay(new Date("2026-09-24T01:04:59.500Z")), 500)
+  assert.equal(nextTickDelay(new Date("2026-09-24T01:12:00.000Z")), 180_000)
 })
 
 test("normalizes model variants and dated snapshot suffixes", () => {
