@@ -39,9 +39,12 @@ export function PricingBlock(props: { context: Plugin.Context; sessionID: string
         </text>
         <For each={rows()}>
           {(row) => (
-            <box flexDirection="row" justifyContent="space-between" gap={1} minWidth={0}>
-              <text fg={theme.text.base} wrapMode="none" truncate flexShrink={1}>
-                {row.profile.label}
+            <box flexDirection="row" gap={1} minWidth={0}>
+              <text fg={theme.text.muted} flexShrink={0}>
+                •
+              </text>
+              <text fg={theme.text.base} wrapMode="none" truncate flexGrow={1} flexShrink={1} minWidth={0}>
+                <b>{row.profile.label}</b>
               </text>
               <box flexDirection="row" gap={1} flexShrink={0}>
                 <text
