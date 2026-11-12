@@ -3,6 +3,7 @@ import assert from "node:assert/strict"
 import test from "node:test"
 import {
   formatNext,
+  formatNextPair,
   hhmm,
   modelFamily,
   nextChange,
@@ -10,6 +11,7 @@ import {
   periodInfo,
   PROFILES,
   resolveProfile,
+  zoneLabel,
   type Profile,
 } from "./schedule.ts"
 
@@ -100,6 +102,44 @@ test("formats the next transition clock and day", () => {
   assert.equal(formatNext(new Date("2026-09-24T04:00:00Z"), now), "04:00")
   assert.equal(formatNext(new Date("2026-09-28T01:00:00Z"), now), "Mon 01:00")
   assert.equal(formatNext(new Date("2026-10-05T01:00:00Z"), now), "Oct 5 01:00")
+})
+
+test("formats the transition pair in a local zone with DST applied", () => {
+  const berlin = "Europe/Berlin"
+  // CET (UTC+1) in winter.
+  assert.equal(
+    formatNextPair(new Date("2026-01-15T17:00:00Z"), new Date("2026-01-15T12:00:00Z"), berlin),
+    "17:00 UTC · 18:00",
+  )
+  // CEST (UTC+2) in summer.
+  assert.equal(
+    formatNextPair(new Date("2026-07-15T16:00:00Z"), new Date("2026-07-15T12:00:00Z"), berlin),
+    "16:00 UTC · 18:00",
+  )
+  // The 2026-03-29 switch skips 02:00-03:00 Berlin, so 01:00 UTC is already 03:00.
+  assert.equal(
+    formatNextPair(new Date("2026-03-29T01:00:00Z"), new Date("2026-03-28T12:00:00Z"), berlin),
+    "Sun 01:00 UTC · Sun 03:00",
+  )
+  // A same-day UTC transition can already be the next day in Berlin.
+  assert.equal(
+    formatNextPair(new Date("2026-01-15T23:30:00Z"), new Date("2026-01-15T12:00:00Z"), berlin),
+    "23:30 UTC · Fri 00:30",
+  )
+  assert.equal(
+    formatNext(new Date("2026-01-15T23:30:00Z"), new Date("2026-01-15T12:00:00Z"), berlin),
+    "Fri 00:30",
+  )
+})
+
+test("collapses the pair when the local zone is UTC", () => {
+  assert.equal(formatNextPair(new Date("2026-01-15T17:00:00Z"), new Date("2026-01-15T12:00:00Z"), "UTC"), "17:00 UTC")
+})
+
+test("derives a short label from an IANA zone id", () => {
+  assert.equal(zoneLabel("Europe/Berlin"), "Berlin")
+  assert.equal(zoneLabel("America/New_York"), "New York")
+  assert.equal(zoneLabel("UTC"), "UTC")
 })
 
 test("formats minutes without wrapping past midnight", () => {

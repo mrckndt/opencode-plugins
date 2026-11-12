@@ -1,10 +1,11 @@
 // TUI plugin: shows DeepSeek off-peak pricing periods for Ollama Cloud and OpenCode Go.
 import { Plugin } from "@opencode/plugin/tui"
 import { createMemo, createSignal, Show } from "solid-js"
-import { formatNext, nextChange, nextTickDelay, periodInfo, resolveProfile } from "./schedule.ts"
+import { formatNextPair, nextChange, nextTickDelay, periodInfo, resolveProfile, systemTimeZone, zoneLabel } from "./schedule.ts"
 
 export function PricingBlock(props: { context: Plugin.Context; sessionID: string; now: () => Date }) {
   const theme = props.context.theme
+  const timeZone = systemTimeZone()
   const profile = createMemo(() => {
     const live = props.context.ui.model.current()
     if (live) return resolveProfile(live.providerID, live.modelID)
@@ -20,31 +21,32 @@ export function PricingBlock(props: { context: Plugin.Context; sessionID: string
         const next = nextChange(active(), now)
         return (
           <box>
-            <text fg={theme.text.base}>
-              <b>DeepSeek off-peak</b>
-              <span style={{ fg: theme.text.muted }}> · UTC</span>
-            </text>
             <box flexDirection="row" gap={1} minWidth={0}>
-              <text fg={theme.text.muted} flexShrink={0}>
-                •
+              <text fg={theme.text.base} wrapMode="none" flexShrink={0}>
+                <b>DeepSeek</b>
               </text>
-              <text fg={theme.text.base} wrapMode="none" truncate flexGrow={1} flexShrink={1} minWidth={0}>
-                <b>{active().label}</b>
+              <text fg={theme.text.muted} wrapMode="none" flexShrink={0}>
+                ·
               </text>
-              <box flexDirection="row" gap={1} flexShrink={0}>
-                <text fg={info === "peak" ? theme.text.base : theme.text.muted} wrapMode="none">
-                  {info}
-                </text>
-                <Show when={next}>
-                  {(transition) => (
-                    <text fg={theme.text.muted} wrapMode="none">
-                      {transition().kind === "peakEnd" ? "▼" : "▲"}{" "}
-                      {formatNext(transition().at, props.now())}
-                    </text>
-                  )}
-                </Show>
-              </box>
+              <text fg={info === "peak" ? theme.text.base : theme.text.muted} wrapMode="none" flexShrink={0}>
+                <b>{info}</b>
+              </text>
+              <text fg={theme.text.muted} wrapMode="none" flexShrink={0}>
+                · {zoneLabel(timeZone)}
+              </text>
             </box>
+            <Show when={next}>
+              {(transition) => (
+                <box flexDirection="row" gap={1} minWidth={0}>
+                  <text fg={info === "peak" ? theme.text.base : theme.text.muted} wrapMode="none" flexShrink={0}>
+                    {transition().kind === "peakEnd" ? "▼" : "▲"}
+                  </text>
+                  <text fg={theme.text.muted} wrapMode="none">
+                    {formatNextPair(transition().at, props.now(), timeZone)}
+                  </text>
+                </box>
+              )}
+            </Show>
           </box>
         )
       }}

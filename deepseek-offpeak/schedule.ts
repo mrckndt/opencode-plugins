@@ -102,20 +102,68 @@ export function hhmm(minutes: number) {
   return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`
 }
 
-export function formatNext(at: Date, now: Date) {
-  const clock = hhmm(at.getUTCHours() * 60 + at.getUTCMinutes())
-  const sameDay = at.toISOString().slice(0, 10) === now.toISOString().slice(0, 10)
-  if (sameDay) return clock
-  const days = Math.round(
-    (Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate()) -
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())) /
-      DAY_MS,
-  )
+/** IANA time zone of the machine running the TUI. */
+export function systemTimeZone() {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone
+}
+
+/** Short display name for an IANA zone id: "Europe/Berlin" -> "Berlin". */
+export function zoneLabel(timeZone: string) {
+  return timeZone.split("/").pop()!.replace(/_/g, " ")
+}
+
+const zoneFormatters = new Map<string, Intl.DateTimeFormat>()
+
+function zoneFormatter(timeZone: string) {
+  let formatter = zoneFormatters.get(timeZone)
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    })
+    zoneFormatters.set(timeZone, formatter)
+  }
+  return formatter
+}
+
+/** Minutes after local midnight and the local calendar day, resolved in `timeZone`. */
+function zoneClock(date: Date, timeZone: string) {
+  const parts = new Map(zoneFormatter(timeZone).formatToParts(date).map((part) => [part.type, part.value]))
+  const year = Number(parts.get("year"))
+  const month = Number(parts.get("month"))
+  const day = Number(parts.get("day"))
+  return {
+    minutes: Number(parts.get("hour")) * 60 + Number(parts.get("minute")),
+    dayNumber: Math.round(Date.UTC(year, month - 1, day) / DAY_MS),
+  }
+}
+
+/**
+ * Formats the next transition in `timeZone` (default UTC), with a day prefix
+ * when it falls on a later calendar day there. Named zones carry their own DST
+ * rules, so no manual offset math is needed.
+ */
+export function formatNext(at: Date, now: Date, timeZone = "UTC") {
+  const clock = hhmm(zoneClock(at, timeZone).minutes)
+  const days = zoneClock(at, timeZone).dayNumber - zoneClock(now, timeZone).dayNumber
+  if (days === 0) return clock
   const format =
     days < 7
-      ? new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "UTC" })
-      : new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
+      ? new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone })
+      : new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone })
   return `${format.format(at)} ${clock}`
+}
+
+/** UTC clock first, then the same transition in `timeZone`: "18:00 UTC · 19:00". */
+export function formatNextPair(at: Date, now: Date, timeZone: string) {
+  const utc = formatNext(at, now)
+  if (timeZone === "UTC") return `${utc} UTC`
+  return `${utc} UTC · ${formatNext(at, now, timeZone)}`
 }
 
 /** Milliseconds until the next refresh tick, aligned to whole REFRESH_MS intervals. */
